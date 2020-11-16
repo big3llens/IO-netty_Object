@@ -41,8 +41,8 @@ public class Client extends JFrame {
                 chatArea.append(getParcel.getMessage() + "\n");
 //                    objectIn.reset();
 //                    objectIn.close();
-                socket.getInputStream().mark(0);
-                socket.getInputStream().reset();
+//                socket.getInputStream().mark(0);
+//                socket.getInputStream().reset();
             } catch (ClassNotFoundException | IOException e) {
                 e.printStackTrace();
             }
