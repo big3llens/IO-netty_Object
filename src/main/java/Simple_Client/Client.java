@@ -10,80 +10,111 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 
 public class Client extends JFrame {
     private JTextField text;
     private JTextArea chatArea;
-    private Socket socket;
-    //    private final InputStream in;
-//    private final OutputStream out;
-//    private ObjectInputStream objectIn;
-//    private ObjectOutputStream objectOut;
-    private ObjectEncoderOutputStream objectOut;
-    private ObjectDecoderInputStream objectIn;
-    private ObjectEncoderOutputStream out;
-    private ObjectDecoderInputStream in;
+    private final ObjectEncoderOutputStream objectOut;
+    private final ObjectDecoderInputStream objectIn;
+    Path rootPath = Path.of("client1");
 
     public Client() throws HeadlessException, IOException {
-        socket = new Socket("localhost", 9000);
-//        in = socket.getInputStream();
-//        out = socket.getOutputStream();
+        Socket socket = new Socket("localhost", 9000);
         objectIn = new ObjectDecoderInputStream(new BufferedInputStream(socket.getInputStream()));
         objectOut = new ObjectEncoderOutputStream(new BufferedOutputStream(socket.getOutputStream()));
         prepareGui();
 
         new Thread(() -> {
-            try {
-                Parcel getParcel = (Parcel) objectIn.readObject();
-                System.out.println(getParcel.toString());
-                System.out.println("getter: " + getParcel.getMessage());
-                chatArea.append(getParcel.getMessage() + "\n");
-//                    objectIn.reset();
-//                    objectIn.close();
-//                socket.getInputStream().mark(0);
-//                socket.getInputStream().reset();
-            } catch (ClassNotFoundException | IOException e) {
-                e.printStackTrace();
+            while (true){
+                try {
+                    Parcel getParcel = (Parcel) objectIn.readObject();
+                    if (getParcel.getMessageType() == 10){
+                        chatArea.append(getParcel.getMessage() + "\n");
+                    }
+                    if (getParcel.getMessageType() == 20){
+                        if (!Files.exists(Path.of(rootPath.toString() + "/" + getParcel.getNameFile()))){
+                            Files.createFile(Path.of(rootPath.toString() + "/" + getParcel.getNameFile()));
+                        }
+                        Path newFile = Path.of(rootPath.toString() + "/" + getParcel.getNameFile());
+                        FileOutputStream fos = new FileOutputStream(newFile.toFile());
+                        fos.write(getParcel.getFileContents());
+                        fos.flush();
+                    }
+
+                } catch (ClassNotFoundException | IOException e) {
+                    e.printStackTrace();
+                }
             }
         }).start();
     }
-    private void sendMessage(String message) {
+    private void sendMessage(byte command, String message) {
         try {
-            objectOut.writeObject(new Parcel((byte) 10, message));
+            objectOut.writeObject(new Parcel(command, message));
             objectOut.flush();
-//            System.out.println(new Parcel((byte) 10, message).toString());
+            text.setText("");
+            text.grabFocus();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    private void sendFile(String filename){
+        if (!Files.exists(Path.of(rootPath.toString() + "/" + filename))){
+            chatArea.append("Такого файла не существует\n");
+        }
+        File file = new File(rootPath.toString() + "/" + filename);
+        System.out.println(file.getName());
+        FileInputStream fin = null;
+        try {
+            fin = new FileInputStream(file);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        try {
+            System.out.println(fin.available());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println((int)file.length());
+        int read = 0;
+        if (file.length() < 2000000000){
+            byte[] bytes = new byte[(int)file.length()];
+            System.out.println(file.length());
+            try {
+                bytes = fin.readNBytes((int)file.length());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+//            fin.read(bytes, 0, bytes.length);
+            System.out.println(Arrays.toString(bytes));
+            System.out.println(new Parcel((byte)30, file.getName(), bytes).toString());
+            try {
+                objectOut.writeObject(new Parcel((byte)30, file.getName(), bytes));
+                objectOut.flush();
+                text.setText("");
+                text.grabFocus();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     private void getFile(String fileName) {
-
+        try {
+            objectOut.writeObject(new Parcel((byte)20, "", fileName));
+            objectOut.flush();
+            text.setText("");
+            text.grabFocus();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void getMessage() {
 
-    }
-
-
-    private void sendFile(String filename) {
-
-    }
-
-//    public class Run implements Runnable {
-//
-//        @Override
-//        public void run() {
-//            while (true) {
-//
-//            }
-//        }
-//    }
-
-    public static void main(String[] args) throws IOException {
-        new Client();
     }
 
     public void prepareGui() {
@@ -107,22 +138,31 @@ public class Client extends JFrame {
 
         sendMsg.addActionListener(a -> {
             String[] cmd = text.getText().split(" ");
-            if (cmd[0].equals("upload")) {
-                sendFile(cmd[1]);
+            switch (cmd[0]){
+                case "upload":
+                    sendFile(cmd[1]);
+                    break;
+                case "download":
+                    getFile(cmd[1]);
+                    break;
+                default:
+                    sendMessage((byte)10, text.getText());
+
             }
-            if (cmd[0].equals("download")) {
-                getFile(cmd[1]);
-            } else sendMessage(text.getText());
         });
 
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 super.windowClosed(e);
-                sendMessage("exit");
+                sendMessage((byte)10, "exit");
             }
         });
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setVisible(true);
+    }
+
+    public static void main(String[] args) throws IOException {
+        new Client();
     }
 }

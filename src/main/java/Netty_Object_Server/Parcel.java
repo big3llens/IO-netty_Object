@@ -20,6 +20,12 @@ public class Parcel implements Serializable {
         this.message = message;
     }
 
+    public Parcel(byte messageType, String message, String nameFile){
+        this.messageType = messageType;
+        this.message = message;
+        this.nameFile = nameFile;
+    }
+
     public Parcel(byte messageType, String nameFile, byte[] fileContents){
         this.messageType = messageType;
         this.nameFile = nameFile;
