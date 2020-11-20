@@ -3,7 +3,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 
 public class Parcel implements Serializable {
-    /* 10- отправка обычного сообщение, 11- команда ls, 12- команда cd, 13- команда mkdir, 14- команда touch,
+    /* 9- авторизация, 10- отправка обычного сообщение, 11- команда ls, 12- команда cd, 13- команда mkdir, 14- команда touch,
     15- команда rm, 16- команда cope, 17- команда cat, 20- download, 30- upload
     */
     private byte messageType;
@@ -12,6 +12,10 @@ public class Parcel implements Serializable {
     private byte[] fileContents;
 
     public Parcel(){
+    }
+
+    public Parcel(byte b){
+        messageType = b;
     }
 
     public Parcel(byte messageType, String message){

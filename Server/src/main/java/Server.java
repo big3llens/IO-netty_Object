@@ -32,13 +32,14 @@ public class Server {
             ServerBootstrap b = new ServerBootstrap();
             b.group(auth, worker)
                     .channel(NioServerSocketChannel.class)
+//                    .handler(new AuthHendler())
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel channel) throws Exception {
                             channel.pipeline().addLast(
                                     new ObjectEncoder(),
-                                    new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-                                    new MainHendler()
+                                    new ObjectDecoder(ClassResolvers.cacheDisabled(Parcel.class.getClassLoader())),
+                                    new AuthHendler()
                             );
                         }
                     });
@@ -57,4 +58,3 @@ public class Server {
         new Server();
     }
 }
-

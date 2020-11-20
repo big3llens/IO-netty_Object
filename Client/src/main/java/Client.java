@@ -17,14 +17,13 @@ public class Client extends JFrame {
     private JTextArea chatArea;
     private final ObjectEncoderOutputStream objectOut;
     private final ObjectDecoderInputStream objectIn;
-    Path rootPath = Path.of("client");
+    Path rootPath = Path.of("Client/client_disk");
 
     public Client() throws HeadlessException, IOException {
         Socket socket = new Socket("localhost", 9000);
         objectIn = new ObjectDecoderInputStream(new BufferedInputStream(socket.getInputStream()));
         objectOut = new ObjectEncoderOutputStream(new BufferedOutputStream(socket.getOutputStream()));
         prepareGui();
-
         new Thread(() -> {
             while (true){
                 try {
@@ -48,6 +47,7 @@ public class Client extends JFrame {
             }
         }).start();
     }
+
     private void sendMessage(byte command, String message) {
         try {
             objectOut.writeObject(new Parcel(command, message));
@@ -87,8 +87,7 @@ public class Client extends JFrame {
                 e.printStackTrace();
             }
 //            fin.read(bytes, 0, bytes.length);
-            System.out.println(Arrays.toString(bytes));
-            System.out.println(new Parcel((byte)30, file.getName(), bytes).toString());
+//            System.out.println(new Parcel((byte)30, file.getName(), bytes).toString());
             try {
                 objectOut.writeObject(new Parcel((byte)30, file.getName(), bytes));
                 objectOut.flush();
@@ -138,11 +137,25 @@ public class Client extends JFrame {
             String[] cmd = text.getText().split(" ");
             switch (cmd[0]){
                 case "upload":
-                    sendFile(cmd[1]);
-                    break;
+                    sendFile(cmd[1]);break;
                 case "download":
-                    getFile(cmd[1]);
-                    break;
+                    getFile(cmd[1]);break;
+                case "/auth":
+                    sendMessage((byte)9, cmd[1] + " " + cmd[2]); break;
+                case "ls":
+                    sendMessage((byte)11, ""); break;
+                case "cd":
+                    sendMessage((byte)12, cmd[1]); break;
+                case "mkdir":
+                    sendMessage((byte)13, cmd[1]);break;
+                case "touch":
+                    sendMessage((byte)14, cmd[1]);break;
+                case "rm":
+                    sendMessage((byte)15, cmd[1]);break;
+                case "cope":
+                    sendMessage((byte)16, cmd[1]);break;
+                case "cat":
+                    sendMessage((byte)17, cmd[1]);break;
                 default:
                     sendMessage((byte)10, text.getText());
 
